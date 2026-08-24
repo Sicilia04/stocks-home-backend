@@ -1,0 +1,47 @@
+volumes:
+  stocks_home_local_postgres_data: {}
+  stocks_home_local_postgres_data_backups: {}
+  
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: stocks_home_local_django
+    container_name: stocks_home_local_django
+    depends_on:
+      - postgres
+      - mailtrap-local
+    volumes:
+      - /app/.venv
+      - .:/app:z
+    env_file:
+      - path: ./.envs/.local/.django
+        required: false
+      - path: ./.envs/.local/.postgres
+        required: false
+    ports:
+      - '8000:8000'
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: stocks_home_production_postgres
+    container_name: stocks_home_local_postgres
+    volumes:
+      - stocks_home_local_postgres_data:/var/lib/postgresql/18/docker
+      - stocks_home_local_postgres_data_backups:/backups
+    env_file:
+      - path: ./.envs/.local/.postgres
+        required: false
+
+  mailtrap-local:
+    image: docker.io/mailtrap/mailtrap-local:latest
+    container_name: stocks_home_local_mailtrap
+    ports:
+      - "3550:3550"
+    tmpfs:
+      - /var/lib/mailtrap-local
