@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models, transaction
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
@@ -24,6 +26,14 @@ class Category(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args: object, **kwargs: object) -> None:
+        # Le slug suit toujours le nom : regenere via slugify a chaque
+        # enregistrement. "name" etant unique, le slug l'est aussi, sauf en
+        # cas de deux noms distincts mais slugifies identiques (ex. "Café" /
+        # "cafe") : save() leve alors IntegrityError, converti en 400 par l'API.
+        self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
 
 class Product(TimeStampedModel):
@@ -82,6 +92,14 @@ class StockMovement(TimeStampedModel):
         verbose_name=_("Product"),
         on_delete=models.CASCADE,
         related_name="movements",
+    )
+    # Utilisateur a qui appartient le mouvement (historique trace jusqu'a lui).
+    # PROTECT : on ne supprime pas un utilisateur qui a des mouvements.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("User"),
+        on_delete=models.PROTECT,
+        related_name="stock_movements",
     )
     kind = models.CharField(_("Kind"), max_length=3, choices=MovementKind.choices)
     # MinValueValidator(1) : un mouvement à quantité nulle est refusé par full_clean().
