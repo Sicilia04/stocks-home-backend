@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from stocks_home.stock.tests.factories import ProductFactory
 from stocks_home.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -20,8 +19,3 @@ def _media_storage(settings, tmpdir) -> None:
 @pytest.fixture
 def user(db) -> User:
     return UserFactory.create()
-
-
-@pytest.fixture
-def product(db) -> Product:
-    return ProductFactory.create()
