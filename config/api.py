@@ -2,14 +2,18 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import HttpRequest
 from ninja import NinjaAPI
-from ninja.security import SessionAuth
+from ninja.security import SessionAuth, HttpBearer
+from ninja_jwt.authentication import JWTAuth
+from ninja_jwt.controller import NinjaJWTDefaultController
+from ninja_extra import NinjaExtraAPI
 
-api = NinjaAPI(
+
+api = NinjaExtraAPI(
     urls_namespace="api",
-    auth=SessionAuth(),
+    auth=[SessionAuth(), JWTAuth()],
     docs_decorator=staff_member_required,
 )
-
+api.register_controllers(NinjaJWTDefaultController)
 
 def _handle_model_validation_error(request: HttpRequest, exc: Exception) -> None:
     """Convertit la ValidationError levée dans un modele (save, etc.) en 400.

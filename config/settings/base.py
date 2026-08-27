@@ -89,9 +89,9 @@ THIRD_PARTY_APPS = [
     "crispy_bootstrap5",
     "allauth",
     "allauth.account",
-    "allauth.mfa",
-    "allauth.socialaccount",
     "corsheaders",
+    "ninja_jwt",
+    "ninja_extra",
 ]
 
 LOCAL_APPS = [
