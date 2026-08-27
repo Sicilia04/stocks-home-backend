@@ -6,7 +6,7 @@ class User(AbstractUser):
     """
     Default custom user model for Stocks Home.
     If adding fields that need to be filled at user signup,
-    check forms.SignupForm and forms.SocialSignupForms accordingly.
+    check forms.SignupForm accordingly.
     """
     def get_absolute_url(self) -> str:
         """Get URL for user's detail view.
