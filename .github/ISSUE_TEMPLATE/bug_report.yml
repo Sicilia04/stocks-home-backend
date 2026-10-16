@@ -1,0 +1,60 @@
+name: Bug report
+description: Signaler un bogue / un comportement inattendu
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de remplir ce formulaire.
+  - type: input
+    id: version
+    attributes:
+      label: Version / Commit
+      description: La version exacte, le tag ou le SHA du commit concerné.
+      placeholder: "0.1.0 / 9f3a1c2 ou master"
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes de reproduction
+      description: Décrivez comment reproduire le problème.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      description: Ce que vous attendiez de façon raisonnable.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportement réel
+      description: Ce qui s'est réellement produit.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Colle les logs utiles (sans identifiants). Utilisez un bloc de code ``` si nécessaire.
+    validations:
+      required: false
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environnement
+      options:
+        - Docker Compose (local)
+        - Autre (préciser en commentaire)
+        - Production (auto-hébergé)
+    validations:
+      required: false

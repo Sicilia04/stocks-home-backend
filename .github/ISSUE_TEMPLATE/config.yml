@@ -1,0 +1,30 @@
+name: Configurations
+description: Autres interactions avec le dépôt (support, questions...)
+title: ""
+labels: ["question"]
+assignees: []
+body:
+  - type: checkboxes
+    id: category
+    attributes:
+      label: Catégorie
+      options:
+        - label: Question / support
+        - label: Discussion générale
+        - label: Autre
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Décrivez votre demande.
+      placeholder: Exemple : comment configurer l'authentification JWT ?
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        > **Note** : pour signaler une **vulnérabilité de sécurité**, utilisez
+        > le canal [Private Vulnerability Reporting](https://github.com/Sicilia04/stocks-home-backend/security/advisories/new)
+        > — ne pas ouvrir d'issue publique. Voir [SECURITY.md](https://github.com/Sicilia04/stocks-home-backend/blob/master/SECURITY.md).

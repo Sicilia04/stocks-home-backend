@@ -3,7 +3,7 @@ name = "stocks_home"
 version = "0.1.0"
 description = "Gestionnaire de stock pour maison"
 readme = "README.md"
-license = { text = "Not open source" }
+license = { text = "AGPL-3.0-or-later" }
 authors = [
   { name = "Florian Alu", email = "fla@grapps.fr" },
 ]

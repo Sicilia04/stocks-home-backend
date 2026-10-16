@@ -2,6 +2,6 @@
 # ------------------------------------------------------------------------------
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
+POSTGRES_USER=stocks_home
+POSTGRES_PASSWORD=stocks_home
 POSTGRES_DB=stocks_home
-POSTGRES_USER=RQhjgvzaMQDmgcNrqOeTjFzFbfIJzEBd
-POSTGRES_PASSWORD=m1ZaIKsiYT3OGpQuwkDAtpwlfDSNnJ1sf4PbJMAWYsh5GV2cnbTjiRQYZFZWDstv

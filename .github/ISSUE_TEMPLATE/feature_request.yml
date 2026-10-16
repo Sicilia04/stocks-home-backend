@@ -1,0 +1,52 @@
+name: Feature request
+description: Proposer une nouvelle fonctionnalité ou une amélioration
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de décrire la fonctionnalité souhaitée. Plus la description est
+        précise, plus la discussion sera productive.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème
+      description: Quel problème souhaitez-vous résoudre ?
+      placeholder: Exemple : je voudrais pouvoir exporter mon stock au CSV.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+      description: Décrivez la solution que vous imaginez.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Avez-vous envisagé d'autres solutions ?
+    validations:
+      required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Périmètre
+      options:
+        - API uniquement
+        - UI + API
+        - Documentation
+    validations:
+      required: false
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: Je prends note que
+      options:
+        - label: Cette proposition respecte le [Code de conduite](https://github.com/Sicilia04/stocks-home-backend/blob/master/CODE_OF_CONDUCT.md)
+          required: true
+        - label: Je suis prêt(e) à contribuer à l'implémentation
+          required: false

@@ -1,68 +1,94 @@
 # Stocks Home
 
-Gestionnaire de stock pour maison
+Gestionnaire de stock pour la maison : suivi de vos produits, catégories et
+mouvements de stock, avec une API REST JWT. Conçu pour être auto-hébergé.
 
+> **Auto-hébergement** — Stocks Home est conçu pour tourner chez vous. Consultez
+> la [SECURITY policy](SECURITY.md) pour signaler une vulnérabilité.
+
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![CI](https://github.com/Sicilia04/stocks-home-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/Sicilia04/stocks-home-backend/actions)
+[![Python](https://img.shields.io/badge/Python-3.14-blue.svg)](https://python.org)
 [![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-## Settings
+## Fonctionnalités
 
-Moved to [settings](https://cookiecutter-django.readthedocs.io/en/latest/1-getting-started/settings.html).
+- CRUD catégories, produits et mouvements de stock
+- Authentification JWT (`django-ninja-jwt`) et session
+- API REST via `django-ninja` / `django-ninja-extra`
+- Base de données PostgreSQL
+- Déploiement conteneurisé (Docker Compose)
 
-## Basic Commands
+## Stack
 
-### Setting Up Your Users
+| Composant  | Outil                              |
+| ---------- | ---------------------------------- |
+| Langage    | Python 3.14                        |
+| Framework  | Django 6.0                         |
+| API        | django-ninja, django-ninja-jwt     |
+| BDD        | PostgreSQL                         |
+| Cache      | Redis (optionnel)                  |
+| Outils     | uv, pre-commit, ruff, mypy         |
 
-- To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
+## Prérequis
 
-- To create a **superuser account**, use this command:
+- Docker + Docker Compose
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Git
 
-      uv run python manage.py createsuperuser
+## Démarrage
 
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
+```bash
+# Construire et démarrer les services (django + postgres + mailtrap-local)
+docker compose -f docker-compose.local.yml up --build -d
 
-### Type checks
+# Migrations
+docker compose -f docker-compose.local.yml exec django python manage.py migrate
 
-Running type checks with mypy:
+# Créer un superutilisateur
+docker compose -f docker-compose.local.yml exec django python manage.py createsuperuser
+```
 
-    uv run mypy stocks_home
+L'application est accessible sur `http://127.0.0.1:8000`.
+La documentation interactive de l'API (Swagger) nécessite un compte staff :
+`/api/docs/`.
 
-### Test coverage
+## Développement
 
-To run the tests, check your test coverage, and generate an HTML coverage report:
+Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour le guide complet. En résumé :
 
-    uv run coverage run -m pytest
-    uv run coverage html
-    uv run open htmlcov/index.html
+```bash
+# Tests
+docker compose -f docker-compose.local.yml exec django pytest
 
-#### Running tests with pytest
+# Lint + format (pre-commit : ruff, djlint, django-upgrade...)
+uv run pre-commit run --all-files
 
-    uv run pytest
+# Type checks
+uv run mypy stocks_home
+```
 
-### Live reloading and Sass CSS compilation
+## Documentation
 
-Moved to [Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally.html#using-webpack-or-gulp).
+La documentation Sphinx se trouve dans `docs/`. Pour la construire :
 
-### Email Server
+```bash
+docker compose -f docker-compose.docs.yml up --build
+# Documentation : http://127.0.0.1:9000
+```
 
-In development, it is often nice to be able to see emails that are being sent from your application. For that reason local SMTP server [Mailtrap Local](https://github.com/mailtrap/mailtrap-local) with a web interface is available as docker container.
+## Contribuer
 
-Container mailtrap-local will start automatically when you will run all docker containers.
-Please check [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally-docker.html) for more details how to start all containers.
+Toute contribution est la bienvenue ! Pour démarrer, lisez
+[CONTRIBUTING.md](CONTRIBUTING.md). En soumettant une contribution, vous
+acceptez le [Code de conduite](CODE_OF_CONDUCT.md).
 
-With Mailtrap Local running, to view messages that are sent by your application, open your browser and go to `http://127.0.0.1:3550`
+## Signaler un problème
 
-### Sentry
+- **Bogue** : [issues](https://github.com/Sicilia04/stocks-home-backend/issues) avec le modèle « Bug report ».
+- **Nouvelle fonctionnalité** : [issues](https://github.com/Sicilia04/stocks-home-backend/issues) avec le modèle « Feature request ».
+- **Vulnérabilité** : voir [SECURITY.md](SECURITY.md) — ne pas ouvrir d'issue publique.
 
-Sentry is an error logging aggregator service. You can sign up for a free account at <https://sentry.io/signup/?code=cookiecutter> or download and host it yourself.
-The system is set up with reasonable defaults, including 404 logging and integration with the WSGI application.
+## Licence
 
-You must set the DSN url in production.
-
-## Deployment
-
-The following details how to deploy this application.
-
-### Docker
-
-See detailed [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/3-deployment/deployment-with-docker.html).
+Distribué sous licence [AGPL-3.0](LICENSE).
