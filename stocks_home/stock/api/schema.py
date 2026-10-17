@@ -1,10 +1,11 @@
-"""Schemas django-ninja pour l'application stock.
+"""django-ninja (Pydantic) schemas for the ``stock`` app.
 
-Un schema est la declaration du format de donnee echange par l'API :
-- les schemas de sortie (Read) sont generes a partir des modeles Django ;
-- les schemas d'entree (Write) definissent les champs acceptes dans le
-  corps de requete JSON, avec validation Pydantic (les validateurs Django
-  declares sur les modeles, comme le code-barres EAN, sont reperes aussi).
+A schema is the declaration of the data shape exchanged by the API:
+
+* **output** (*Read*) schemas are generated from the Django models;
+* **input** (*Write*) schemas declare the fields accepted in the JSON
+  request body, with Pydantic validation (Django validators declared on the
+  models — e.g. the EAN barcode — are picked up as well).
 """
 
 from ninja import ModelSchema
@@ -13,12 +14,11 @@ from stocks_home.stock.models import Category
 from stocks_home.stock.models import Product
 from stocks_home.stock.models import StockMovement
 
-
 # --- Categories ---------------------------------------------------------------
 
 
 class CategorySchema(ModelSchema):
-    """Schema de sortie : ce qui est renvoye dans les reponses JSON."""
+    """Output schema: what is returned in the JSON response."""
 
     class Meta:
         model = Category
@@ -26,11 +26,11 @@ class CategorySchema(ModelSchema):
 
 
 class CategoryWriteSchema(ModelSchema):
-    """Schema d'entree : corps de requete pour creer une categorie.
+    """Input schema: request body for creating a category.
 
-    Le slug n'est pas fourni par l'appelant : il est genere automatiquement
-    depuis le nom dans Category.save() (slugify).
-    L'unicite est garantie par le modele (unique=True).
+    The slug is not supplied by the caller — it is generated automatically
+    from the name in ``Category.save`` (``slugify``). Uniqueness is
+    enforced by the model (``unique=True``).
     """
 
     class Meta:
@@ -38,17 +38,18 @@ class CategoryWriteSchema(ModelSchema):
         fields = ["name"]
 
 
-# --- Produits -----------------------------------------------------------------
+# --- Products -----------------------------------------------------------------
 
 
 class ProductSchema(ModelSchema):
-    """Schema de sortie pour un produit."""
-    # Nom de la categorie, expose a plat pour une lecture facile du JSON
-    # (en plus de l'id deja presente dans "category").
+    """Output schema for a product."""
+
+    # Category name, flattened for easy reading of the JSON (in addition to
+    # the id already present in "category").
     category_name: str
 
-    # is_low_stock est une @property du modele (pas une colonne de base de
-    # donnees) : declaree explicitement, ninja la lit sur l'objet.
+    # ``is_low_stock`` is a model ``@property`` (not a database column): it is
+    # declared explicitly so ninja reads it from the object.
     is_low_stock: bool
 
     class Meta:
@@ -56,12 +57,12 @@ class ProductSchema(ModelSchema):
         fields = [
             "id",
             "name",
-            # barcode : le RegexValidator du modele (EAN-8/EAN-13) est
-            # repris par ninja et applique aussi a la validation d'entree.
+            # barcode: the model's RegexValidator (EAN-8/EAN-13) is reused by
+            # ninja and also applied on input validation.
             "barcode",
-            # ForeignKey exposee comme un simple id dans le JSON de sortie.
+            # ForeignKey exposed as a plain id in the output JSON.
             "category",
-            # quantity : lecture seule via l'API, modifiee par les mouvements.
+            # quantity: read-only via the API; modified by movements only.
             "quantity",
             "min_quantity",
             "is_active",
@@ -69,48 +70,50 @@ class ProductSchema(ModelSchema):
 
     @staticmethod
     def resolve_category_name(obj: Product) -> str:
+        """Return the category's display name (flattened in the JSON)."""
         return obj.category.name
 
 
 class ProductWriteSchema(ModelSchema):
-    """Schema d'entree pour creer/mettre a jour un produit.
+    """Input schema for creating / updating a product.
 
-    NB : quantity est volontairement absente : elle ne doit jamais etre
-    ecrite directement, uniquement mise a jour par les mouvements de stock
-    (StockMovement.save() gere la mise a jour atomique).
+    NB: ``quantity`` is intentionally absent — it must never be written
+    directly; it is only updated by stock movements
+    (``StockMovement.save`` handles the atomic update).
     """
+
     class Meta:
         model = Product
-        # "category" est acceptee sous forme d'id entier (ninja convertit
-        # automatiquement les ForeignKey en id et inversement).
+        # "category" is accepted as an integer id (ninja automatically
+        # converts ForeignKey <-> id).
         fields = ["name", "barcode", "category", "min_quantity", "is_active"]
 
 
-# --- Mouvements de stock --------------------------------------------------------
+# --- Stock movements ----------------------------------------------------------
 
 
 class StockMovementSchema(ModelSchema):
-    """Schema de sortie pour un mouvement (historique)."""
+    """Output schema for a stock movement (audit history)."""
 
     class Meta:
         model = StockMovement
-        # "product" est expose comme un id (FK -> id) dans le JSON.
-        # "created" vient de TimeStampedModel : la valeur est produite
-        # par Django a l'enregistrement, jamais fournie par le client.
+        # "product" is exposed as an id (FK -> id) in the JSON.
+        # "created" comes from TimeStampedModel: the value is produced by
+        # Django at save time and is never supplied by the client.
         fields = ["id", "product", "user", "kind", "quantity", "created"]
 
 
 class StockMovementWriteSchema(ModelSchema):
-    """Schema d'entree pour enregistrer un mouvement (entree/sortie).
+    """Input schema for recording a stock movement (in/out).
 
-    La validation des regles de gestion (produit actif, stock suffisant)
-    se fait dans StockMovement.save() ; l'API convertit la ValidationError
-    du modele en reponse HTTP 400.
+    The business-rule validation (active product, sufficient stock) happens
+    in ``StockMovement.save``; the API converts the resulting model
+    ``ValidationError`` into an HTTP 400 response (see ``config.api``).
     """
 
     class Meta:
         model = StockMovement
-        # kind : TextChoices du modele -> enum Pydantic "in" / "out".
-        # quantity : le MinValueValidator(1) du modele est repris par ninja,
-        # on refuse donc 0 et les nombres negatifs des cote API aussi.
+        # kind: the model's TextChoices -> Pydantic enum "in" / "out".
+        # quantity: the model's MinValueValidator(1) is reused by ninja, so
+        # 0 and negative numbers are rejected on the API side as well.
         fields = ["product", "kind", "quantity"]

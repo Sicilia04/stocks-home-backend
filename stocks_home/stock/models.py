@@ -1,12 +1,30 @@
+"""Domain models for the ``stock`` app.
+
+This module defines the business logic of the stock manager:
+
+* ``Category``        - a product category with a unique auto-generated
+  ``slug`` derived from its name.
+* ``Product``         - a product identified by a unique barcode
+  (EAN-8/EAN-13), belonging to a category and holding a quantity of stock.
+* ``StockMovement``   - an auditable stock in/out event. Writing a
+  movement atomically updates the product's quantity inside a single
+  transaction so either both happen or neither does.
+
+All models extend ``model_utils.models.TimeStampedModel`` and therefore
+carry ``created`` / ``modified`` timestamps automatically.
+"""
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, RegexValidator
-from django.db import models, transaction
+from django.core.validators import MinValueValidator
+from django.core.validators import RegexValidator
+from django.db import models
+from django.db import transaction
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
-# Le code-barres doit correspondre à un EAN-8 (8 chiffres) ou un EAN-13 (13 chiffres).
+# A barcode must be an EAN-8 (8 digits) or an EAN-13 (13 digits).
 barcode_validator = RegexValidator(
     regex=r"^(?:\d{8}|\d{13})$",
     message=_("Barcode must be an EAN-8 or EAN-13 (8 or 13 digits)."),
@@ -14,7 +32,11 @@ barcode_validator = RegexValidator(
 
 
 class Category(TimeStampedModel):
-    """Categorie de produits, nom et slug uniques (trié par nom)."""
+    """A product category with a unique name and auto-generated slug.
+
+    The slug is always derived from the name (see ``save``) so categories
+    can be addressed by a stable, URL-safe identifier.
+    """
 
     name = models.CharField(_("Name"), max_length=100, unique=True)
     slug = models.SlugField(_("Slug"), max_length=100, unique=True)
@@ -28,16 +50,26 @@ class Category(TimeStampedModel):
         return self.name
 
     def save(self, *args: object, **kwargs: object) -> None:
-        # Le slug suit toujours le nom : regenere via slugify a chaque
-        # enregistrement. "name" etant unique, le slug l'est aussi, sauf en
-        # cas de deux noms distincts mais slugifies identiques (ex. "Café" /
-        # "cafe") : save() leve alors IntegrityError, converti en 400 par l'API.
+        # The slug always follows the name: it is regenerated with ``slugify``
+        # on every save. Because ``name`` is unique, the slug is unique too,
+        # except when two distinct names slugify to the same string (e.g.
+        # "Café" / "cafe"). In that case ``save()`` raises ``IntegrityError``
+        # which the API converts into an HTTP 400.
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
 
 class Product(TimeStampedModel):
-    """Produit référencé par un code-barres unique, avec stock et seuil d'alerte."""
+    """A stockable product, identified by a unique barcode.
+
+    A product has a category (``PROTECT`` so a category that still has
+    products cannot be deleted), a quantity of stock, a minimum-quantity
+    threshold used to flag low stock, and an activation flag.
+
+    The quantity is only ever changed through
+    ``StockMovement`` (which keeps an audit trail); it is never written
+    directly via the API.
+    """
 
     name = models.CharField(_("Name"), max_length=255)
     barcode = models.CharField(
@@ -46,20 +78,21 @@ class Product(TimeStampedModel):
         unique=True,
         validators=[barcode_validator],
     )
-    # PROTECT : impossible de supprimer une catégorie qui contient des produits.
+    # PROTECT: deleting a category that still contains products is not allowed.
     category = models.ForeignKey(
         Category,
         verbose_name=_("Category"),
         on_delete=models.PROTECT,
         related_name="products",
     )
-    # Seuil sous lequel le stock est considéré comme faible.
+    # Threshold below which the stock is considered low.
     min_quantity = models.PositiveIntegerField(
         _("Minimum quantity"), default=0,
     )
-    # Quantité en stock ; modifiée en pratique par StockMovement (trace des mouvements).
+    # Quantity currently in stock; in practice this is only modified by
+    # StockMovement (which keeps a trail of every change).
     quantity = models.PositiveIntegerField(_("Quantity"), default=0)
-    # Un produit inactif ne peut plus recevoir de mouvement de stock.
+    # An inactive product can no longer receive stock movements.
     is_active = models.BooleanField(_("Active"), default=True)
 
     class Meta:
@@ -72,15 +105,16 @@ class Product(TimeStampedModel):
 
     @property
     def is_low_stock(self) -> bool:
-        """Vrai si le stock est strictement sous le seuil mini."""
+        """``True`` when the quantity is strictly below the minimum threshold."""
         return self.quantity < self.min_quantity
 
 
 class StockMovement(TimeStampedModel):
-    """Mouvement de stock (entrée/sortie) qui met à jour la quantité du produit.
+    """A stock in/out event that updates the product's quantity.
 
-    L'écriture du mouvement et la mise à jour du stock sont dans la même
-    transaction : l'un échoue, tout est annulé.
+    Writing the movement and updating the product's quantity happen inside
+    the same transaction: if either part fails, the whole operation is
+    rolled back.
     """
 
     class MovementKind(models.TextChoices):
@@ -93,8 +127,8 @@ class StockMovement(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="movements",
     )
-    # Utilisateur a qui appartient le mouvement (historique trace jusqu'a lui).
-    # PROTECT : on ne supprime pas un utilisateur qui a des mouvements.
+    # The user the movement belongs to (the audit trail is attributed to them).
+    # PROTECT: a user that has movements can not be deleted.
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name=_("User"),
@@ -102,7 +136,8 @@ class StockMovement(TimeStampedModel):
         related_name="stock_movements",
     )
     kind = models.CharField(_("Kind"), max_length=3, choices=MovementKind.choices)
-    # MinValueValidator(1) : un mouvement à quantité nulle est refusé par full_clean().
+    # MinValueValidator(1): a movement with a zero quantity is rejected
+    # by ``full_clean()``.
     quantity = models.PositiveIntegerField(
         _("Quantity"), validators=[MinValueValidator(1)],
     )
@@ -110,9 +145,9 @@ class StockMovement(TimeStampedModel):
     class Meta:
         verbose_name = _("Stock movement")
         verbose_name_plural = _("Stock movements")
-        # "-pk" rend le tri stable en cas de même horodatage.
+        # "-pk" keeps the ordering stable when timestamps tie.
         ordering = ["-created", "-pk"]
-        # Index pour les requêtes « mouvements d'un produit, triés par date ».
+        # Index to speed up "movements of a product, ordered by date" queries.
         indexes = [
             models.Index(
                 fields=["product", "created"], name="stock_mov_product_created",
@@ -124,21 +159,28 @@ class StockMovement(TimeStampedModel):
         return f"{sign}{self.quantity} x {self.product}"
 
     def save(self, *args: object, **kwargs: object) -> None:
-        # Tout (vérification + update du produit + insert du mouvement) est atomique :
-        # une ValidationError annule aussi bien l'insert que la mise à jour du stock.
+        # Everything (checks + product update + movement insert) is atomic:
+        # a ``ValidationError`` rolls back both the insert and the stock update.
         with transaction.atomic():
             product = Product.objects.filter(pk=self.product_id).first()
             if product is None or not product.is_active:
                 raise ValidationError(
-                    _("Stock movements are not allowed on inactive product %(product)s"),
+                    _(
+                        "Stock movements are not allowed on "
+                        "inactive product %(product)s",
+                    ),
                     {"product": product.name if product else self.product_id},
                 )
-            delta = self.quantity if self.kind == self.MovementKind.IN else -self.quantity
+            if self.kind == self.MovementKind.IN:
+                delta = self.quantity
+            else:
+                delta = -self.quantity
             qs = Product.objects.filter(pk=self.product_id)
             if delta < 0:
-                # Sortie de stock : on n'incrémente que si la quantité actuelle est
-                # suffisante (condition DANS le UPDATE, donc sans course condition).
-                # Si aucune ligne n'est mise à jour, c'est que le stock est insuffisant.
+                # Stock out: only decrement if the current quantity is high
+                # enough. The condition lives INSIDE the ``UPDATE`` statement
+                # (``quantity__gte=...``), so it is safe against race
+                # conditions. If no row is updated, the stock is insufficient.
                 qs = qs.filter(quantity__gte=-delta)
                 if not qs.update(quantity=models.F("quantity") + delta):
                     raise ValidationError(
