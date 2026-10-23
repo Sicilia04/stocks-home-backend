@@ -43,7 +43,7 @@ dev = [
   "django-extensions==4.1",
   "django-stubs[compatible-mypy]==6.1.0",
   "django-upgrade==1.33.0",
-  "djlint==1.44.2",
+  "djlint==1.46.6",
   "factory-boy==3.3.3",
   "ipdb==0.13.13",
   "mypy==2.4.0",
