@@ -41,7 +41,7 @@ dev = [
   "django-coverage-plugin==3.2.2",
   "django-debug-toolbar==7.1.1",
   "django-extensions==4.1",
-  "django-stubs[compatible-mypy]==6.1.0",
+  "django-stubs[compatible-mypy]==6.1.2",
   "django-upgrade==1.33.0",
   "djlint==1.44.2",
   "factory-boy==3.3.3",
